@@ -405,6 +405,9 @@ void initial_tasks(){
 
 void Lose(){
 	decrement_life();
+	if(is_Game_over()){
+		Game_Over();
+	}
 }
 
 void Win(){
@@ -501,9 +504,6 @@ uint16_t life_to_pin_number(){
 void decrement_life(){
 	turn_off_lost_life_led();
 	Life--;
-	if(is_Game_over()){
-		Game_Over();
-	}
 }
 
 void turn_off_lost_life_led(){
