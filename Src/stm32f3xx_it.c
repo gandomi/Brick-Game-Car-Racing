@@ -36,8 +36,12 @@
 #include "stm32f3xx_it.h"
 
 /* USER CODE BEGIN 0 */
+#include "LiquidCrystal.h"
 #include "Utility.h"
 #include <stdbool.h>
+
+extern bool keypad_row[4];
+extern char keypad_btn;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -74,7 +78,14 @@ void SysTick_Handler(void)
 void EXTI9_5_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI9_5_IRQn 0 */
-
+	keypad_btn = find_button(keypad_row, 4);
+	if(keypad_btn != 'e') {
+		write(keypad_btn);
+	} else {
+		// error
+	}
+	HAL_Delay(50);
+	enable_keypad_intrrupt(keypad_row);
   /* USER CODE END EXTI9_5_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_6);
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_7);

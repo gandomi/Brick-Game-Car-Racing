@@ -18,6 +18,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdbool.h>
 
+char find_button(bool *keypad_row, int size);
+void shift_right(bool *arr, int size);
 void enable_keypad_intrrupt(bool * keypad_row);
 void write_keypad_row(bool * keypad_row);
 bool isNumber(char ch);
