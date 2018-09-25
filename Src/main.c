@@ -44,6 +44,9 @@
 #include "LiquidCrystal.h"
 #include "Utility.h"
 #include <stdbool.h>
+
+// byte is not defined here by default
+typedef unsigned char byte;
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -84,7 +87,28 @@ bool is_Game_over();
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+// make Game characters:
+byte player_char[8] = {
+	0x00,
+	0x04,
+	0x0E,
+	0x1F,
+	0x1F,
+	0x0E,
+	0x04,
+	0x00
+};
 
+byte obstacle_char[8] = {
+	0x15,
+	0x15,
+	0x1F,
+	0x0E,
+	0x0E,
+	0x1F,
+	0x15,
+	0x15
+};
 /* USER CODE END 0 */
 
 /**
@@ -362,6 +386,12 @@ void initial_tasks(){
 	
 	// init & configure LCD
 	LiquidCrystal(GPIOD, GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10, GPIO_PIN_11, GPIO_PIN_12, GPIO_PIN_13, GPIO_PIN_14);
+	
+	// create Player character
+  createChar(0, player_char);
+  // create Obstacle character
+  createChar(1, obstacle_char);
+	
 	print("    Writen By");
 	setCursor(0, 1);
 	print("   Ali.Gandomi");
@@ -472,7 +502,7 @@ void decrement_life(){
 	turn_off_lost_life_led();
 	Life--;
 	if(is_Game_over()){
-		Game_Over_tasks();
+		Game_Over();
 	}
 }
 
