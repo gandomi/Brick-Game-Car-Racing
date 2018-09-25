@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=C:/Users/Ali/Desktop/ARM/Final Project/FinalProject/Inc
+HeaderPath=C:/Users/Ali/Desktop/ARM/Final Project/Brick-Game-Car-Racing/Inc
 HeaderFiles=stm32f3xx_it.h;stm32f3xx_hal_conf.h;main.h;
-SourcePath=C:/Users/Ali/Desktop/ARM/Final Project/FinalProject/Src
+SourcePath=C:/Users/Ali/Desktop/ARM/Final Project/Brick-Game-Car-Racing/Src
 SourceFiles=stm32f3xx_it.c;stm32f3xx_hal_msp.c;main.c;
 
 [PreviousLibFiles]
