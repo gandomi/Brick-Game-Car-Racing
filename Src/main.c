@@ -59,7 +59,7 @@ PCD_HandleTypeDef hpcd_USB_FS;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 uint8_t Life;
-uint8_t Level;
+uint8_t Level, temp_level;
 enum State state;
 
 bool keypad_row[4];
@@ -387,6 +387,7 @@ void initial_tasks(){
 	
 	// Set the default level
 	Level = 1;
+	temp_level = 0;
 	
 	// init & configure LCD
 	LiquidCrystal(GPIOD, GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10, GPIO_PIN_11, GPIO_PIN_12, GPIO_PIN_13, GPIO_PIN_14);

@@ -40,6 +40,10 @@
 #include "Utility.h"
 #include <stdbool.h>
 
+void level_error(void);
+
+extern uint8_t Level, temp_level;
+extern enum State state;
 extern bool keypad_row[4];
 extern char keypad_btn;
 /* USER CODE END 0 */
@@ -80,7 +84,27 @@ void EXTI9_5_IRQHandler(void)
   /* USER CODE BEGIN EXTI9_5_IRQn 0 */
 	keypad_btn = find_button(keypad_row, 4);
 	if(keypad_btn != 'e') {
-		write(keypad_btn);
+		if(state == Getting_Level_Error){
+			temp_level = 0;
+			state = Getting_Level;
+			setCursor(13, 0);
+			print("   ");
+			setCursor(13, 0);
+		}
+		if(state == Getting_Level){
+			if(isNumber(keypad_btn)){
+				temp_level = temp_level * 10 + char2int(keypad_btn);
+				write(keypad_btn);
+			} else if (keypad_btn == 'C'){
+				// OK
+				if(temp_level <= 10){
+					state = Playing;
+					Level = temp_level;
+				} else {
+					level_error();
+				}
+			}
+		}
 	} else {
 		// error
 	}
@@ -97,6 +121,10 @@ void EXTI9_5_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-
+void level_error(void){
+	state = Getting_Level_Error;
+	setCursor(13, 0);
+	print("ERR");
+}
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
