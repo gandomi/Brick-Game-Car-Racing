@@ -23,6 +23,7 @@ void write_keypad_row(bool * keypad_row);
 bool isNumber(char ch);
 bool isOperand(char ch);
 int char2int(char ch);
+enum State {Getting_Level, Playing}; 
 
 #endif /* __UTILITY_H__ */
 

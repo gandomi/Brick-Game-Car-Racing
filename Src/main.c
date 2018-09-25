@@ -60,6 +60,7 @@ PCD_HandleTypeDef hpcd_USB_FS;
 /* Private variables ---------------------------------------------------------*/
 uint8_t Life;
 uint8_t Level;
+enum State state;
 
 bool keypad_row[4];
 char keypad_btn;
@@ -74,16 +75,16 @@ static void MX_USB_PCD_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-void initial_tasks();
-void Lose();
-void Win();
-void Game_Over();
-void initial_print_life_on_led();
-uint16_t life_to_pin_number_cumulative();
-uint16_t life_to_pin_number();
-void decrement_life();
-void turn_off_lost_life_led();
-bool is_Game_over();
+void initial_tasks(void);
+void Lose(void);
+void Win(void);
+void Game_Over(void);
+void initial_print_life_on_led(void);
+uint16_t life_to_pin_number_cumulative(void);
+uint16_t life_to_pin_number(void);
+void decrement_life(void);
+void turn_off_lost_life_led(void);
+bool is_Game_over(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -378,6 +379,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void initial_tasks(){
 	
+	// Set the initial state
+	state = Getting_Level;
+	
 	// Set the number of player lifes
 	Life = 8;
 	
@@ -392,6 +396,7 @@ void initial_tasks(){
   // create Obstacle character
   createChar(1, obstacle_char);
 	
+	setCursor(0, 0);
 	print("    Writen By");
 	setCursor(0, 1);
 	print("   Ali.Gandomi");
@@ -401,6 +406,12 @@ void initial_tasks(){
 	
 	// Init KeyPad
 	enable_keypad_intrrupt(keypad_row);
+	
+	clear();
+	print("Level[1-10]:");
+	setCursor(0, 1);
+	print("C -> START");
+	setCursor(13, 0);
 }
 
 void Lose(){
@@ -432,36 +443,31 @@ void initial_print_life_on_led(){
 uint16_t life_to_pin_number_cumulative(){
 	switch(Life){
 		case 1:
-			return (uint16_t)0x0000U;
-			break;
+			return (uint16_t)0x0100U;
 		
 		case 2:
 			return (uint16_t)0x0300U;
-			break;
 		
 		case 3:
 			return (uint16_t)0x0700U;
-			break;
 		
 		case 4:
 			return (uint16_t)0x0F00U;
-			break;
 		
 		case 5:
 			return (uint16_t)0x1F00U;
-			break;
 		
 		case 6:
 			return (uint16_t)0x3F00U;
-			break;
 		
 		case 7:
 			return (uint16_t)0x7F00U;
-			break;
 		
 		case 8:
 			return (uint16_t)0xFF00U;
-			break;
+		
+		default:
+			return (uint16_t)0x0000U;
 	}
 }
 
@@ -469,35 +475,30 @@ uint16_t life_to_pin_number(){
 	switch(Life){
 		case 1:
 			return (uint16_t)0x0100U;
-			break;
 		
 		case 2:
 			return (uint16_t)0x0200U;
-			break;
 		
 		case 3:
 			return (uint16_t)0x0400U;
-			break;
 		
 		case 4:
 			return (uint16_t)0x0800U;
-			break;
 		
 		case 5:
 			return (uint16_t)0x1000U;
-			break;
 		
 		case 6:
 			return (uint16_t)0x2000U;
-			break;
 		
 		case 7:
 			return (uint16_t)0x4000U;
-			break;
 		
 		case 8:
 			return (uint16_t)0x8000U;
-			break;
+		
+		default:
+			return (uint16_t)0x0000U;
 	}
 }
 
