@@ -85,6 +85,7 @@ uint16_t life_to_pin_number(void);
 void decrement_life(void);
 void turn_off_lost_life_led(void);
 bool is_Game_over(void);
+void print_get_level(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -408,11 +409,7 @@ void initial_tasks(){
 	// Init KeyPad
 	enable_keypad_intrrupt(keypad_row);
 	
-	clear();
-	print("Level[1-10]:");
-	setCursor(0, 1);
-	print("C -> START");
-	setCursor(13, 0);
+	print_get_level();
 }
 
 void Lose(){
@@ -524,6 +521,14 @@ void turn_off_lost_life_led(){
 
 bool is_Game_over(){
 	return Life == 0;
+}
+
+void print_get_level(void){
+	clear();
+	print("Level[1-10]:");
+	setCursor(0, 1);
+	print("C -> START");
+	setCursor(13, 0);
 }
 /* USER CODE END 4 */
 
