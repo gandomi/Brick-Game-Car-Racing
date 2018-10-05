@@ -39,11 +39,20 @@
 #include "LiquidCrystal.h"
 #include "Utility.h"
 #include <stdbool.h>
+#include <stdlib.h>
 
 void level_error(void);
+void generate_map(void);
+void clear_map(void);
+void print_map(void);
+
+extern ADC_HandleTypeDef hadc2;
 
 extern uint8_t Level, temp_level;
 extern enum State state;
+extern enum Cell map[16][2];
+extern struct Position player_pos, barrier_pos[10];
+
 extern bool keypad_row[4];
 extern char keypad_btn;
 /* USER CODE END 0 */
@@ -53,6 +62,32 @@ extern char keypad_btn;
 /******************************************************************************/
 /*            Cortex-M4 Processor Interruption and Exception Handlers         */ 
 /******************************************************************************/
+
+/**
+* @brief This function handles System service call via SWI instruction.
+*/
+void SVC_Handler(void)
+{
+  /* USER CODE BEGIN SVCall_IRQn 0 */
+
+  /* USER CODE END SVCall_IRQn 0 */
+  /* USER CODE BEGIN SVCall_IRQn 1 */
+
+  /* USER CODE END SVCall_IRQn 1 */
+}
+
+/**
+* @brief This function handles Pendable request for system service.
+*/
+void PendSV_Handler(void)
+{
+  /* USER CODE BEGIN PendSV_IRQn 0 */
+
+  /* USER CODE END PendSV_IRQn 0 */
+  /* USER CODE BEGIN PendSV_IRQn 1 */
+
+  /* USER CODE END PendSV_IRQn 1 */
+}
 
 /**
 * @brief This function handles System tick timer.
@@ -97,13 +132,16 @@ void EXTI9_5_IRQHandler(void)
 				write(keypad_btn);
 			} else if (keypad_btn == 'C'){
 				// OK
-				if(temp_level <= 10){
+				if(temp_level <= 10 && temp_level > 0){
 					state = Playing;
 					Level = temp_level;
+					generate_map();
 				} else {
 					level_error();
 				}
 			}
+		} else {
+				// Other state handler
 		}
 	} else {
 		// error
@@ -125,6 +163,81 @@ void level_error(void){
 	state = Getting_Level_Error;
 	setCursor(13, 0);
 	print("ERR");
+}
+
+void generate_map(void){
+	clear_map();
+	
+	/*
+	 * Random player position
+	 */
+	uint32_t adc2_value; // for seed
+	HAL_ADC_Start(&hadc2);
+	HAL_Delay(1);
+	adc2_value = HAL_ADC_GetValue(&hadc2);
+	HAL_ADC_Stop(&hadc2);
+	srand(adc2_value); // seed
+	
+	player_pos.row = 0;
+	player_pos.col = rand() % 2;
+	map[player_pos.row][player_pos.col] = player;
+	
+	/*
+	 * Random barrier position
+	 */
+	do {
+		for(int i = 0; i < Level; i++){
+			barrier_pos[i].row = (rand() % 15) + 1;
+			barrier_pos[i].col = rand() % 2;
+			
+			// Check not repetitive
+			for(int j = 0; j < i; j++){
+				if(barrier_pos[j].row == barrier_pos[i].row && barrier_pos[j].col == barrier_pos[i].col){
+					barrier_pos[i].row = (rand() % 15) + 1;
+					barrier_pos[i].col = rand() % 2;
+					
+					j = 0;
+				}
+			}
+		}
+	} while(false /* Map not valid */);
+	
+	/*
+	 * Copy barriers to map
+	 */
+	for(int i = 0; i < Level; i++){
+		map[barrier_pos[i].row][barrier_pos[i].col] = barrier;
+	}
+	
+	/*
+	 * print initial map
+	 */
+	print_map();
+}
+
+void clear_map(void){
+	for(uint8_t i = 0; i < 16; i++){
+		map[i][0] = map[i][1] = empty;
+	}
+}
+
+void print_map(void){
+	clear();
+	for(int col = 1; col >= 0; col--){
+		for(int row = 15; row >= 0; row--){
+			if(map[row][col] == empty)
+				print(" ");
+			else if(map[row][col] == barrier)
+				write(1);
+			else
+				write(0);
+		}
+		setCursor(0, 1);
+		
+//		char str[16];
+//		sprintf(str, "%d", player_pos.col);
+//		print(str);
+	}
 }
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

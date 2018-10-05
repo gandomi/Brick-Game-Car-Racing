@@ -26,6 +26,11 @@ bool isNumber(char ch);
 bool isOperand(char ch);
 int char2int(char ch);
 enum State {Getting_Level, Getting_Level_Error, Playing};
+enum Cell {empty, barrier, player}; 
+struct Position 
+{ 
+   uint8_t row, col; 
+};
 
 #endif /* __UTILITY_H__ */
 
