@@ -26,6 +26,7 @@ bool isNumber(char ch);
 bool isOperand(char ch);
 int char2int(char ch);
 enum State {Getting_Level, Getting_Level_Error, Playing};
+enum Playing_State {Play, Pause};
 enum Cell {empty, barrier, player}; 
 struct Position 
 { 

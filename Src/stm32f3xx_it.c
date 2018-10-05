@@ -45,19 +45,35 @@ void level_error(void);
 void generate_map(void);
 void clear_map(void);
 void print_map(void);
+void print_level_on_7seg(void);
+void print_to_7447(char num);
+void player_RightLeft_move(void);
+void Lose(void);
+void Win(void);
+void Game_Over(void);
+void decrement_life(void);
+void turn_off_lost_life_led(void);
+bool is_Game_over(void);
+uint16_t life_to_pin_number_cumulative(void);
+uint16_t life_to_pin_number(void);
 
 extern ADC_HandleTypeDef hadc2;
 
-extern uint8_t Level, temp_level;
+extern uint8_t Life, Level, temp_level;
 extern enum State state;
+extern enum Playing_State playing_state;
 extern enum Cell map[16][2];
 extern struct Position player_pos, barrier_pos[10];
+// counters
+extern uint8_t counter_7segment;
+extern uint16_t counter_player_move;
 
 extern bool keypad_row[4];
-extern char keypad_btn;
+extern char keypad_btn; int counter = 0;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern TIM_HandleTypeDef htim2;
 
 /******************************************************************************/
 /*            Cortex-M4 Processor Interruption and Exception Handlers         */ 
@@ -122,9 +138,17 @@ void EXTI0_IRQHandler(void)
 			state = Playing;
 			Level = temp_level;
 			generate_map();
+			// Start 1ms timer
+			HAL_TIM_Base_Start_IT(&htim2);
 		} else {
 			level_error();
 		}
+	} else if(state == Playing && playing_state == Pause) {
+		// Right/Left move
+		playing_state = Play;
+	} else if(state == Playing && playing_state == Play) {
+		// Right/Left move
+		player_RightLeft_move();
 	} else {
 			// Other state handler
 	}
@@ -161,6 +185,8 @@ void EXTI9_5_IRQHandler(void)
 //					state = Playing;
 //					Level = temp_level;
 //					generate_map();
+//					// Start 1ms timer
+//					HAL_TIM_Base_Start_IT(&htim2);
 //				} else {
 //					level_error();
 //				}
@@ -181,6 +207,41 @@ void EXTI9_5_IRQHandler(void)
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */
 	
   /* USER CODE END EXTI9_5_IRQn 1 */
+}
+
+/**
+* @brief This function handles TIM2 global interrupt.
+*/
+void TIM2_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+	
+	/*
+	 * Add counters
+	 */
+	if(state == Playing)
+		counter_7segment++;
+	if(state == Playing && playing_state == Play)
+		counter_player_move++;
+	
+	/*
+	 * Check events
+	 */
+	if(state == Playing && counter_7segment == 5){
+		// print level on 7 seg
+		print_level_on_7seg();
+		counter_7segment = 0;
+	}
+	if(state == Playing && playing_state == Play && counter_player_move == 500 + ((11 - Level) * 50)){
+		// Move player
+		counter_player_move = 0;
+	}
+	
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+
+  /* USER CODE END TIM2_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
@@ -264,5 +325,147 @@ void print_map(void){
 //		print(str);
 	}
 }
+
+void print_level_on_7seg(void){
+	// print Digit 1
+	temp_level = Level;
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_5, GPIO_PIN_SET);
+	print_to_7447(temp_level % 10);
+	temp_level /= 10;
+	HAL_Delay(2);
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_5, GPIO_PIN_RESET);
+	
+	// print Digit 2
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_6, GPIO_PIN_SET);
+	print_to_7447(temp_level % 10);
+	temp_level /= 10;
+	HAL_Delay(2);
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_6, GPIO_PIN_RESET);
+}
+
+void print_to_7447(char num){
+	char IC7447[4] = { 0 };
+	for(int i = 0; i < 4; i++)
+	{
+		if(num % 2 == 1)
+			IC7447[i] = 1;
+		num /= 2;
+	}
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, IC7447[0] ? GPIO_PIN_SET : GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, IC7447[1] ? GPIO_PIN_SET : GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, IC7447[2] ? GPIO_PIN_SET : GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3, IC7447[3] ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+void player_RightLeft_move(void){
+	struct Position new_player_pos;
+	new_player_pos.row = player_pos.row;
+	new_player_pos.col = 1 - player_pos.col;
+	
+	if(map[new_player_pos.row][new_player_pos.col] == barrier){
+		Lose();
+	}
+}
+
+void Lose(){
+	decrement_life();
+	if(is_Game_over()){
+		Game_Over();
+	}
+}
+
+void Win(){
+	
+}
+
+void Game_Over(){
+	
+}
+
+void decrement_life(){
+	turn_off_lost_life_led();
+	Life--;
+}
+
+void turn_off_lost_life_led(){
+	// Turn Off with some visual effect
+	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
+	HAL_Delay(300);
+	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
+	HAL_Delay(300);
+	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
+	HAL_Delay(300);
+	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
+	HAL_Delay(300);
+	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
+	HAL_Delay(300);
+}
+
+bool is_Game_over(){
+	return Life == 0;
+}
+
+uint16_t life_to_pin_number_cumulative(){
+	switch(Life){
+		case 1:
+			return (uint16_t)0x0100U;
+		
+		case 2:
+			return (uint16_t)0x0300U;
+		
+		case 3:
+			return (uint16_t)0x0700U;
+		
+		case 4:
+			return (uint16_t)0x0F00U;
+		
+		case 5:
+			return (uint16_t)0x1F00U;
+		
+		case 6:
+			return (uint16_t)0x3F00U;
+		
+		case 7:
+			return (uint16_t)0x7F00U;
+		
+		case 8:
+			return (uint16_t)0xFF00U;
+		
+		default:
+			return (uint16_t)0x0000U;
+	}
+}
+
+uint16_t life_to_pin_number(){
+	switch(Life){
+		case 1:
+			return (uint16_t)0x0100U;
+		
+		case 2:
+			return (uint16_t)0x0200U;
+		
+		case 3:
+			return (uint16_t)0x0400U;
+		
+		case 4:
+			return (uint16_t)0x0800U;
+		
+		case 5:
+			return (uint16_t)0x1000U;
+		
+		case 6:
+			return (uint16_t)0x2000U;
+		
+		case 7:
+			return (uint16_t)0x4000U;
+		
+		case 8:
+			return (uint16_t)0x8000U;
+		
+		default:
+			return (uint16_t)0x0000U;
+	}
+}
+
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

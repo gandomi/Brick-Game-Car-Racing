@@ -56,15 +56,20 @@ I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim2;
+
 PCD_HandleTypeDef hpcd_USB_FS;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-uint8_t Life;
-uint8_t Level, temp_level;
+uint8_t Life, Level, temp_level;
 enum State state;
+enum Playing_State playing_state;
 enum Cell map[16][2];
 struct Position player_pos, barrier_pos[10];
+// counters
+uint8_t counter_7segment;
+uint16_t counter_player_move;
 
 bool keypad_row[4];
 char keypad_btn;
@@ -77,19 +82,12 @@ static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USB_PCD_Init(void);
 static void MX_ADC2_Init(void);
+static void MX_TIM2_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void initial_tasks(void);
-void Lose(void);
-void Win(void);
-void Game_Over(void);
-void initial_print_life_on_led(void);
-uint16_t life_to_pin_number_cumulative(void);
-uint16_t life_to_pin_number(void);
-void decrement_life(void);
-void turn_off_lost_life_led(void);
-bool is_Game_over(void);
+void print_life_on_led(void);
 void print_get_level(void);
 /* USER CODE END PFP */
 
@@ -151,6 +149,7 @@ int main(void)
   MX_SPI1_Init();
   MX_USB_PCD_Init();
   MX_ADC2_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 	initial_tasks();
   /* USER CODE END 2 */
@@ -338,6 +337,39 @@ static void MX_SPI1_Init(void)
 
 }
 
+/* TIM2 init function */
+static void MX_TIM2_Init(void)
+{
+
+  TIM_ClockConfigTypeDef sClockSourceConfig;
+  TIM_MasterConfigTypeDef sMasterConfig;
+
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 1;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 35999;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /* USB init function */
 static void MX_USB_PCD_Init(void)
 {
@@ -362,6 +394,8 @@ static void MX_USB_PCD_Init(void)
         * Output
         * EVENT_OUT
         * EXTI
+        * Free pins are configured automatically as Analog (this feature is enabled through 
+        * the Code Generation settings)
 */
 static void MX_GPIO_Init(void)
 {
@@ -374,6 +408,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOE, CS_I2C_SPI_Pin|LD4_Pin|LD3_Pin|LD5_Pin 
@@ -382,6 +417,10 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, To_7447_Pin|To_7447D1_Pin|To_7447D2_Pin|To_7447D3_Pin 
+                          |Enable___7Seg___Digit_1_Pin|Enable___7Seg___Digit_2_Pin|Enable___7Seg___Digit_3_Pin|Enable___7Seg___Digit_4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : DRDY_Pin MEMS_INT3_Pin MEMS_INT4_Pin MEMS_INT2_Pin */
   GPIO_InitStruct.Pin = DRDY_Pin|MEMS_INT3_Pin|MEMS_INT4_Pin|MEMS_INT2_Pin;
@@ -396,6 +435,26 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(CS_I2C_SPI_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : PE6 PE7 PE0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PC13 PC4 PC5 PC10 
+                           PC11 PC12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_10 
+                          |GPIO_PIN_11|GPIO_PIN_12;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PF9 PF10 PF4 PF6 */
+  GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_4|GPIO_PIN_6;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PC0 PC1 PC2 PC3 */
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -409,6 +468,26 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : PA1 PA2 PA3 PA4 
+                           PA8 PA9 PA10 PA15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4 
+                          |GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB0 PB1 PB2 PB10 
+                           PB11 PB12 PB13 PB14 
+                           PB15 PB4 PB5 PB8 
+                           PB9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10 
+                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14 
+                          |GPIO_PIN_15|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_8 
+                          |GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
   /*Configure GPIO pins : LD4_Pin LD3_Pin LD5_Pin LD7_Pin 
                            LD9_Pin LD10_Pin LD8_Pin LD6_Pin */
   GPIO_InitStruct.Pin = LD4_Pin|LD3_Pin|LD5_Pin|LD7_Pin 
@@ -418,17 +497,34 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : PD8 PD9 PD10 PD11 
+                           PD12 PD13 PD14 PD15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11 
+                          |GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PC6 PC7 PC8 PC9 */
   GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : To_7447_Pin To_7447D1_Pin To_7447D2_Pin To_7447D3_Pin 
+                           Enable___7Seg___Digit_1_Pin Enable___7Seg___Digit_2_Pin Enable___7Seg___Digit_3_Pin Enable___7Seg___Digit_4_Pin */
+  GPIO_InitStruct.Pin = To_7447_Pin|To_7447D1_Pin|To_7447D2_Pin|To_7447D3_Pin 
+                          |Enable___7Seg___Digit_1_Pin|Enable___7Seg___Digit_2_Pin|Enable___7Seg___Digit_3_Pin|Enable___7Seg___Digit_4_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 1, 0);
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
 }
@@ -438,6 +534,7 @@ void initial_tasks(){
 	
 	// Set the initial state
 	state = Getting_Level;
+	playing_state = Pause;
 	
 	// Set the number of player lifes
 	Life = 8;
@@ -445,6 +542,9 @@ void initial_tasks(){
 	// Set the default level
 	Level = 1;
 	temp_level = 0;
+	
+	// Set counters
+	counter_7segment = counter_player_move = 0;
 	
 	// init & configure LCD
 	LiquidCrystal(GPIOD, GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10, GPIO_PIN_11, GPIO_PIN_12, GPIO_PIN_13, GPIO_PIN_14);
@@ -460,30 +560,16 @@ void initial_tasks(){
 	print("   Ali.Gandomi");
 	
 	// Init life LED
-	initial_print_life_on_led();
+	print_life_on_led();
 	
 	// Init KeyPad
 	enable_keypad_intrrupt(keypad_row);
 	
+	// Print Get level
 	print_get_level();
 }
 
-void Lose(){
-	decrement_life();
-	if(is_Game_over()){
-		Game_Over();
-	}
-}
-
-void Win(){
-	
-}
-
-void Game_Over(){
-	
-}
-
-void initial_print_life_on_led(){
+void print_life_on_led(){
 	
 	uint16_t gpio_pin_x = 0x0100U;
 	
@@ -492,91 +578,6 @@ void initial_print_life_on_led(){
 		gpio_pin_x = gpio_pin_x << 1;
 		HAL_Delay(200);
 	}
-}
-
-uint16_t life_to_pin_number_cumulative(){
-	switch(Life){
-		case 1:
-			return (uint16_t)0x0100U;
-		
-		case 2:
-			return (uint16_t)0x0300U;
-		
-		case 3:
-			return (uint16_t)0x0700U;
-		
-		case 4:
-			return (uint16_t)0x0F00U;
-		
-		case 5:
-			return (uint16_t)0x1F00U;
-		
-		case 6:
-			return (uint16_t)0x3F00U;
-		
-		case 7:
-			return (uint16_t)0x7F00U;
-		
-		case 8:
-			return (uint16_t)0xFF00U;
-		
-		default:
-			return (uint16_t)0x0000U;
-	}
-}
-
-uint16_t life_to_pin_number(){
-	switch(Life){
-		case 1:
-			return (uint16_t)0x0100U;
-		
-		case 2:
-			return (uint16_t)0x0200U;
-		
-		case 3:
-			return (uint16_t)0x0400U;
-		
-		case 4:
-			return (uint16_t)0x0800U;
-		
-		case 5:
-			return (uint16_t)0x1000U;
-		
-		case 6:
-			return (uint16_t)0x2000U;
-		
-		case 7:
-			return (uint16_t)0x4000U;
-		
-		case 8:
-			return (uint16_t)0x8000U;
-		
-		default:
-			return (uint16_t)0x0000U;
-	}
-}
-
-void decrement_life(){
-	turn_off_lost_life_led();
-	Life--;
-}
-
-void turn_off_lost_life_led(){
-	// Turn Off with some visual effect
-	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
-	HAL_Delay(300);
-	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
-	HAL_Delay(300);
-	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
-	HAL_Delay(300);
-	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
-	HAL_Delay(300);
-	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
-	HAL_Delay(300);
-}
-
-bool is_Game_over(){
-	return Life == 0;
 }
 
 void print_get_level(void){
