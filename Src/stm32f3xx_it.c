@@ -112,6 +112,30 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
+* @brief This function handles EXTI line0 interrupt.
+*/
+void EXTI0_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI0_IRQn 0 */
+	if(state == Getting_Level){
+		if(temp_level <= 10 && temp_level > 0){
+			state = Playing;
+			Level = temp_level;
+			generate_map();
+		} else {
+			level_error();
+		}
+	} else {
+			// Other state handler
+	}
+  /* USER CODE END EXTI0_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+  /* USER CODE BEGIN EXTI0_IRQn 1 */
+
+  /* USER CODE END EXTI0_IRQn 1 */
+}
+
+/**
 * @brief This function handles EXTI line[9:5] interrupts.
 */
 void EXTI9_5_IRQHandler(void)
@@ -130,16 +154,17 @@ void EXTI9_5_IRQHandler(void)
 			if(isNumber(keypad_btn)){
 				temp_level = temp_level * 10 + char2int(keypad_btn);
 				write(keypad_btn);
-			} else if (keypad_btn == 'C'){
-				// OK
-				if(temp_level <= 10 && temp_level > 0){
-					state = Playing;
-					Level = temp_level;
-					generate_map();
-				} else {
-					level_error();
-				}
-			}
+			} 
+//			else if (keypad_btn == 'C'){
+//				// OK
+//				if(temp_level <= 10 && temp_level > 0){
+//					state = Playing;
+//					Level = temp_level;
+//					generate_map();
+//				} else {
+//					level_error();
+//				}
+//			}
 		} else {
 				// Other state handler
 		}
