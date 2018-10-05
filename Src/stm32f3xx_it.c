@@ -47,7 +47,8 @@ void clear_map(void);
 void print_map(void);
 void print_level_on_7seg(void);
 void print_to_7447(char num);
-void print_RightLeft_move(void);
+void print_player_move(void);
+void player_Forward_move(void);
 void player_RightLeft_move(void);
 void Lose(void);
 void Win(void);
@@ -64,7 +65,7 @@ extern uint8_t Life, Level, temp_level;
 extern enum State state;
 extern enum Playing_State playing_state;
 extern enum Cell map[16][2];
-extern struct Position player_pos, new_player_pos, barrier_pos[10];
+extern struct Position player_pos, initial_player_pos, new_player_pos, barrier_pos[10];
 // counters
 extern uint8_t counter_7segment;
 extern uint16_t counter_player_move;
@@ -235,6 +236,7 @@ void TIM2_IRQHandler(void)
 	}
 	if(state == Playing && playing_state == Play && counter_player_move == 500 + ((11 - Level) * 50)){
 		// Move player
+		player_Forward_move();
 		counter_player_move = 0;
 	}
 	
@@ -265,8 +267,8 @@ void generate_map(void){
 	HAL_ADC_Stop(&hadc2);
 	srand(adc2_value); // seed
 	
-	player_pos.row = 0;
-	player_pos.col = rand() % 2;
+	initial_player_pos.row = player_pos.row = 0;
+	initial_player_pos.col = player_pos.col = rand() % 2;
 	map[player_pos.row][player_pos.col] = player;
 	
 	/*
@@ -358,11 +360,25 @@ void print_to_7447(char num){
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3, IC7447[3] ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
-void print_RightLeft_move(void){
+void print_player_move(void){
 	setCursor(player_pos.row, player_pos.col);
 	print(" ");
 	setCursor(new_player_pos.row, new_player_pos.col);
 	write(0);
+}
+
+void player_Forward_move(void){
+	new_player_pos.row = player_pos.row + 1;
+	new_player_pos.col = player_pos.col;
+	
+	if(map[new_player_pos.row][new_player_pos.col] == barrier){
+		Lose();
+	} else if(new_player_pos.row >= 16){
+		Win();
+	} else {
+		print_player_move();
+		player_pos.row = new_player_pos.row;
+	}
 }
 
 void player_RightLeft_move(void){
@@ -372,7 +388,7 @@ void player_RightLeft_move(void){
 	if(map[new_player_pos.row][new_player_pos.col] == barrier){
 		Lose();
 	} else {
-		print_RightLeft_move();
+		print_player_move();
 		player_pos.col = new_player_pos.col;
 	}
 }
@@ -383,12 +399,16 @@ void Lose(){
 		Game_Over();
 	} else {
 		playing_state = Pause;
+		player_pos.row = initial_player_pos.row;
+		player_pos.col = initial_player_pos.col;
 		print_map();
 	}
 }
 
 void Win(){
-	
+	Level++;
+	playing_state = Pause;
+	generate_map();
 }
 
 void Game_Over(){
