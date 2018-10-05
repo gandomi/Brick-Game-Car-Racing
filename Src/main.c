@@ -66,7 +66,7 @@ uint8_t Life, Level, temp_level;
 enum State state;
 enum Playing_State playing_state;
 enum Cell map[16][2];
-struct Position player_pos, barrier_pos[10];
+struct Position player_pos, new_player_pos, barrier_pos[10];
 // counters
 uint8_t counter_7segment;
 uint16_t counter_player_move;

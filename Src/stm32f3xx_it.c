@@ -47,6 +47,7 @@ void clear_map(void);
 void print_map(void);
 void print_level_on_7seg(void);
 void print_to_7447(char num);
+void print_RightLeft_move(void);
 void player_RightLeft_move(void);
 void Lose(void);
 void Win(void);
@@ -63,7 +64,7 @@ extern uint8_t Life, Level, temp_level;
 extern enum State state;
 extern enum Playing_State playing_state;
 extern enum Cell map[16][2];
-extern struct Position player_pos, barrier_pos[10];
+extern struct Position player_pos, new_player_pos, barrier_pos[10];
 // counters
 extern uint8_t counter_7segment;
 extern uint16_t counter_player_move;
@@ -309,8 +310,8 @@ void clear_map(void){
 
 void print_map(void){
 	clear();
-	for(int col = 1; col >= 0; col--){
-		for(int row = 15; row >= 0; row--){
+	for(int col = 0; col < 2; col++){
+		for(int row = 0; row < 16; row++){
 			if(map[row][col] == empty)
 				print(" ");
 			else if(map[row][col] == barrier)
@@ -357,13 +358,22 @@ void print_to_7447(char num){
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_3, IC7447[3] ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
+void print_RightLeft_move(void){
+	setCursor(player_pos.row, player_pos.col);
+	print(" ");
+	setCursor(new_player_pos.row, new_player_pos.col);
+	write(0);
+}
+
 void player_RightLeft_move(void){
-	struct Position new_player_pos;
 	new_player_pos.row = player_pos.row;
 	new_player_pos.col = 1 - player_pos.col;
 	
 	if(map[new_player_pos.row][new_player_pos.col] == barrier){
 		Lose();
+	} else {
+		print_RightLeft_move();
+		player_pos.col = new_player_pos.col;
 	}
 }
 
@@ -371,6 +381,9 @@ void Lose(){
 	decrement_life();
 	if(is_Game_over()){
 		Game_Over();
+	} else {
+		playing_state = Pause;
+		print_map();
 	}
 }
 
