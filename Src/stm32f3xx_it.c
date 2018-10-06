@@ -64,6 +64,7 @@ bool validate_map(void);
 void reset_all_counters(void);
 
 extern ADC_HandleTypeDef hadc2;
+extern ADC_HandleTypeDef hadc4;
 
 extern uint8_t Life, Level, temp_level;
 extern enum State state;
@@ -80,6 +81,7 @@ extern char keypad_btn;
 
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim4;
 
 /******************************************************************************/
 /*            Cortex-M4 Processor Interruption and Exception Handlers         */ 
@@ -146,6 +148,7 @@ void EXTI0_IRQHandler(void)
 			generate_map();
 			// Start 1ms timer
 			HAL_TIM_Base_Start_IT(&htim2);
+			HAL_TIM_Base_Start_IT(&htim4);
 		} else {
 			level_error();
 		}
@@ -203,6 +206,7 @@ void EXTI9_5_IRQHandler(void)
 //					generate_map();
 //					// Start 1ms timer
 //					HAL_TIM_Base_Start_IT(&htim2);
+//					HAL_TIM_Base_Start_IT(&htim4);
 //				} else {
 //					level_error();
 //				}
@@ -235,12 +239,56 @@ void TIM2_IRQHandler(void)
 	/*
 	 * Add counters
 	 */
-	if(state == Playing)
-		counter_7segment++;
+//	if(state == Playing)
+//		counter_7segment++;
 	if(state == Playing && playing_state == Play)
 		counter_player_move++;
 	if(state == Finish)
 		counter_treasure++;
+	
+	/*
+	 * Check events
+	 */
+//	if(state == Playing && counter_7segment == 5){
+//		// print level on 7 seg
+//		print_level_on_7seg();
+//		counter_7segment = 0;
+//	}
+	if(state == Playing && playing_state == Play && counter_player_move == /*500 + */((11 - Level) * 50)){
+		// Move player
+		player_Forward_move();
+		counter_player_move = 0;
+	}
+	if(state == Finish && counter_treasure == 2000){
+		counter_treasure = 0;
+		HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_SET);
+		/* 
+	 * Stop 1ms timers
+	 */
+		HAL_TIM_Base_Stop_IT(&htim2);
+		HAL_TIM_Base_Stop_IT(&htim4);
+		
+		state = Idle;
+	}
+	
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+
+  /* USER CODE END TIM2_IRQn 1 */
+}
+
+/**
+* @brief This function handles TIM4 global interrupt.
+*/
+void TIM4_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM4_IRQn 0 */
+	/*
+	 * This Timer is for 7-segment only
+	 */
+	if(state == Playing)
+		counter_7segment++;
 	
 	/*
 	 * Check events
@@ -250,22 +298,11 @@ void TIM2_IRQHandler(void)
 		print_level_on_7seg();
 		counter_7segment = 0;
 	}
-	if(state == Playing && playing_state == Play && counter_player_move == /*500 + */((11 - Level) * 50)){
-		// Move player
-		player_Forward_move();
-		counter_player_move = 0;
-	}
-	if(state == Finish && counter_treasure == 2000){
-		counter_treasure = 0;
-		HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_SET);
-		state = Idle;
-	}
-	
-  /* USER CODE END TIM2_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim2);
-  /* USER CODE BEGIN TIM2_IRQn 1 */
+  /* USER CODE END TIM4_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim4);
+  /* USER CODE BEGIN TIM4_IRQn 1 */
 
-  /* USER CODE END TIM2_IRQn 1 */
+  /* USER CODE END TIM4_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
@@ -277,7 +314,7 @@ void level_error(void){
 
 void generate_map(void){
 	clear_map();
-	
+	// TODO: Bug: Wrong Lose at the end of the messions
 	/*
 	 * Random player position
 	 */
@@ -481,17 +518,21 @@ void Game_Over(void){
 	 * Stop 1ms timer
 	 */
 	HAL_TIM_Base_Stop_IT(&htim2);
+	HAL_TIM_Base_Stop_IT(&htim4);
+	
 	print_game_over();
+	
 	reset_all_counters();
 }
 
 void All_Levels_passed_successfully(void){
 	state = Finish;
+	
 	/* 
-	 * Stop 1ms timer
+	 * Open Ganj
 	 */
-	HAL_TIM_Base_Stop_IT(&htim2);
 	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_RESET);
+	
 	reset_all_counters();
 }
 
@@ -587,7 +628,7 @@ bool validate_map(void){
 }
 
 void reset_all_counters(void){
-	counter_7segment = counter_player_move = counter_treasure = 0;
+	counter_7segment = counter_player_move = 0;
 }
 
 /* USER CODE END 1 */
