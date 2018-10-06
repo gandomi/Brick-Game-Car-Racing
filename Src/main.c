@@ -69,7 +69,7 @@ enum Cell map[16][2];
 struct Position player_pos, initial_player_pos, new_player_pos, barrier_pos[10];
 // counters
 uint8_t counter_7segment;
-uint16_t counter_player_move;
+uint16_t counter_player_move, counter_treasure;
 
 bool keypad_row[4];
 char keypad_btn;
@@ -87,8 +87,6 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void initial_tasks(void);
-void print_life_on_led(void);
-void print_get_level(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -113,6 +111,17 @@ byte barrier_char[8] = {
 	0x1F,
 	0x15,
 	0x15
+};
+
+byte block_char[8] = {
+	0xFF,
+	0xFF,
+	0xFF,
+	0xFF,
+	0xFF,
+	0xFF,
+	0xFF,
+	0xFF
 };
 /* USER CODE END 0 */
 
@@ -164,6 +173,11 @@ int main(void)
 //		sprintf(value, "%d", HAL_ADC_GetValue(&hadc2));
 //		print(value);
 //		HAL_Delay(100);
+		
+//		HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_SET);
+//		HAL_Delay(2000);
+//		HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_RESET);
+//		HAL_Delay(2000);
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -419,6 +433,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(Relay_GPIO_Port, Relay_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, To_7447_Pin|To_7447D1_Pin|To_7447D2_Pin|To_7447D3_Pin 
                           |Enable___7Seg___Digit_1_Pin|Enable___7Seg___Digit_2_Pin|Enable___7Seg___Digit_3_Pin|Enable___7Seg___Digit_4_Pin, GPIO_PIN_RESET);
 
@@ -449,8 +466,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PF9 PF10 PF4 PF6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_4|GPIO_PIN_6;
+  /*Configure GPIO pins : PF9 PF10 PF6 */
+  GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
@@ -475,6 +492,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : Relay_Pin */
+  GPIO_InitStruct.Pin = Relay_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(Relay_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB0 PB1 PB2 PB10 
                            PB11 PB12 PB13 PB14 
@@ -517,7 +541,7 @@ static void MX_GPIO_Init(void)
                           |Enable___7Seg___Digit_1_Pin|Enable___7Seg___Digit_2_Pin|Enable___7Seg___Digit_3_Pin|Enable___7Seg___Digit_4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
@@ -541,10 +565,6 @@ void initial_tasks(){
 	
 	// Set the default level
 	Level = 1;
-	temp_level = 0;
-	
-	// Set counters
-	counter_7segment = counter_player_move = 0;
 	
 	// init & configure LCD
 	LiquidCrystal(GPIOD, GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10, GPIO_PIN_11, GPIO_PIN_12, GPIO_PIN_13, GPIO_PIN_14);
@@ -553,39 +573,25 @@ void initial_tasks(){
   createChar(0, player_char);
   // create barrier character
   createChar(1, barrier_char);
+	// create block character
+  createChar(2, block_char);
 	
 	setCursor(0, 0);
 	print("    Writen By");
 	setCursor(0, 1);
 	print("   Ali.Gandomi");
 	
-	// Init life LED
-	print_life_on_led();
-	
 	// Init KeyPad
 	enable_keypad_intrrupt(keypad_row);
 	
+	// Turn Relay off
+	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_SET);
+	
 	// Print Get level
 	print_get_level();
-}
-
-void print_life_on_led(){
 	
-	uint16_t gpio_pin_x = 0x0100U;
-	
-	for(int i = 0; i < Life; i++){
-		HAL_GPIO_WritePin(GPIOE, gpio_pin_x, GPIO_PIN_SET);
-		gpio_pin_x = gpio_pin_x << 1;
-		HAL_Delay(200);
-	}
-}
-
-void print_get_level(void){
-	clear();
-	print("Level[1-10]:");
-	setCursor(0, 1);
-	print("C -> START");
-	setCursor(13, 0);
+	// Init life LED
+	print_life_on_led();
 }
 /* USER CODE END 4 */
 

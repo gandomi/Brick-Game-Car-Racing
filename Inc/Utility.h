@@ -16,6 +16,7 @@
 #define __UTILITY_H__
 
 /* Includes ------------------------------------------------------------------*/
+#include "LiquidCrystal.h"
 #include <stdbool.h>
 
 char find_button(bool *keypad_row, int size);
@@ -25,7 +26,12 @@ void write_keypad_row(bool * keypad_row);
 bool isNumber(char ch);
 bool isOperand(char ch);
 int char2int(char ch);
-enum State {Getting_Level, Getting_Level_Error, Playing};
+void print_life_on_led(void);
+void print_get_level(void);
+
+extern uint8_t Life;
+
+enum State {Idle, Getting_Level, Getting_Level_Error, Playing, GameOver, Finish};
 enum Playing_State {Play, Pause};
 enum Cell {empty, barrier, player}; 
 struct Position 

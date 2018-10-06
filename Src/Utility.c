@@ -146,3 +146,22 @@ bool isOperand(char ch){
 int char2int(char ch){
 	return ch - '0';
 }
+
+void print_life_on_led(void){
+	
+	uint16_t gpio_pin_x = 0x0100U;
+	
+	for(int i = 0; i < Life; i++){
+		HAL_GPIO_WritePin(GPIOE, gpio_pin_x, GPIO_PIN_SET);
+		gpio_pin_x = gpio_pin_x << 1;
+		HAL_Delay(200);
+	}
+}
+
+void print_get_level(void){
+	clear();
+	print("Level[1-10]:");
+	setCursor(0, 1);
+	print("C -> START");
+	setCursor(13, 0);
+}

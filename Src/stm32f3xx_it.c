@@ -48,16 +48,20 @@ void print_map(void);
 void print_level_on_7seg(void);
 void print_to_7447(char num);
 void print_player_move(void);
+void print_game_over(void);
 void player_Forward_move(void);
 void player_RightLeft_move(void);
 void Lose(void);
 void Win(void);
 void Game_Over(void);
+void All_Levels_passed_successfully(void);
 void decrement_life(void);
-void turn_off_lost_life_led(void);
+void turn_off_lost_life_led(bool effect);
 bool is_Game_over(void);
 uint16_t life_to_pin_number_cumulative(void);
 uint16_t life_to_pin_number(void);
+bool validate_map(void);
+void reset_all_counters(void);
 
 extern ADC_HandleTypeDef hadc2;
 
@@ -68,10 +72,10 @@ extern enum Cell map[16][2];
 extern struct Position player_pos, initial_player_pos, new_player_pos, barrier_pos[10];
 // counters
 extern uint8_t counter_7segment;
-extern uint16_t counter_player_move;
+extern uint16_t counter_player_move, counter_treasure;
 
 extern bool keypad_row[4];
-extern char keypad_btn; int counter = 0;
+extern char keypad_btn;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -151,6 +155,16 @@ void EXTI0_IRQHandler(void)
 	} else if(state == Playing && playing_state == Play) {
 		// Right/Left move
 		player_RightLeft_move();
+	} else if(state == GameOver) {
+		state = Getting_Level;
+		print_get_level();
+		Life = 8;
+		print_life_on_led();
+	} else if(state == Idle) {
+		state = Getting_Level;
+		print_get_level();
+		Life = 8;
+		print_life_on_led();
 	} else {
 			// Other state handler
 	}
@@ -225,6 +239,8 @@ void TIM2_IRQHandler(void)
 		counter_7segment++;
 	if(state == Playing && playing_state == Play)
 		counter_player_move++;
+	if(state == Finish)
+		counter_treasure++;
 	
 	/*
 	 * Check events
@@ -234,10 +250,15 @@ void TIM2_IRQHandler(void)
 		print_level_on_7seg();
 		counter_7segment = 0;
 	}
-	if(state == Playing && playing_state == Play && counter_player_move == 500 + ((11 - Level) * 50)){
+	if(state == Playing && playing_state == Play && counter_player_move == /*500 + */((11 - Level) * 50)){
 		// Move player
 		player_Forward_move();
 		counter_player_move = 0;
+	}
+	if(state == Finish && counter_treasure == 2000){
+		counter_treasure = 0;
+		HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_SET);
+		state = Idle;
 	}
 	
   /* USER CODE END TIM2_IRQn 0 */
@@ -289,7 +310,8 @@ void generate_map(void){
 				}
 			}
 		}
-	} while(false /* Map not valid */);
+		srand(++adc2_value);
+	} while(validate_map());
 	
 	/*
 	 * Copy barriers to map
@@ -367,6 +389,45 @@ void print_player_move(void){
 	write(0);
 }
 
+void print_game_over(void){
+	clear();
+	
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(' '); HAL_Delay(50);
+	write('G'); HAL_Delay(50);
+	write('A'); HAL_Delay(50);
+	write('M'); HAL_Delay(50);
+	write('E'); HAL_Delay(50);
+	write(' '); HAL_Delay(50);
+	write('O'); HAL_Delay(50);
+	write('V'); HAL_Delay(50);
+	write('E'); HAL_Delay(50);
+	write('R'); HAL_Delay(50);
+	write(' '); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	
+	setCursor(0, 1);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+	write(2); HAL_Delay(50);
+}
+
 void player_Forward_move(void){
 	new_player_pos.row = player_pos.row + 1;
 	new_player_pos.col = player_pos.col;
@@ -393,7 +454,7 @@ void player_RightLeft_move(void){
 	}
 }
 
-void Lose(){
+void Lose(void){
 	decrement_life();
 	if(is_Game_over()){
 		Game_Over();
@@ -405,40 +466,61 @@ void Lose(){
 	}
 }
 
-void Win(){
+void Win(void){
 	Level++;
+	if(Level >= 11){
+		All_Levels_passed_successfully();
+	}
 	playing_state = Pause;
 	generate_map();
 }
 
-void Game_Over(){
-	
+void Game_Over(void){
+	state = GameOver;
+	/* 
+	 * Stop 1ms timer
+	 */
+	HAL_TIM_Base_Stop_IT(&htim2);
+	print_game_over();
+	reset_all_counters();
 }
 
-void decrement_life(){
-	turn_off_lost_life_led();
+void All_Levels_passed_successfully(void){
+	state = Finish;
+	/* 
+	 * Stop 1ms timer
+	 */
+	HAL_TIM_Base_Stop_IT(&htim2);
+	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_RESET);
+	reset_all_counters();
+}
+
+void decrement_life(void){
+	turn_off_lost_life_led(true);
 	Life--;
 }
 
-void turn_off_lost_life_led(){
+void turn_off_lost_life_led(bool effect){
 	// Turn Off with some visual effect
 	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
-	HAL_Delay(300);
-	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
-	HAL_Delay(300);
-	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
-	HAL_Delay(300);
-	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
-	HAL_Delay(300);
-	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
-	HAL_Delay(300);
+	if(effect){
+		HAL_Delay(300);
+		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
+		HAL_Delay(300);
+		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
+		HAL_Delay(300);
+		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
+		HAL_Delay(300);
+		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
+		HAL_Delay(300);
+	}
 }
 
-bool is_Game_over(){
+bool is_Game_over(void){
 	return Life == 0;
 }
 
-uint16_t life_to_pin_number_cumulative(){
+uint16_t life_to_pin_number_cumulative(void){
 	switch(Life){
 		case 1:
 			return (uint16_t)0x0100U;
@@ -469,7 +551,7 @@ uint16_t life_to_pin_number_cumulative(){
 	}
 }
 
-uint16_t life_to_pin_number(){
+uint16_t life_to_pin_number(void){
 	switch(Life){
 		case 1:
 			return (uint16_t)0x0100U;
@@ -498,6 +580,14 @@ uint16_t life_to_pin_number(){
 		default:
 			return (uint16_t)0x0000U;
 	}
+}
+
+bool validate_map(void){
+	return false;
+}
+
+void reset_all_counters(void){
+	counter_7segment = counter_player_move = counter_treasure = 0;
 }
 
 /* USER CODE END 1 */
