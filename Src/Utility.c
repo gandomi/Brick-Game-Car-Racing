@@ -149,13 +149,22 @@ int char2int(char ch){
 
 void print_life_on_led(void){
 	
-	uint16_t gpio_pin_x = 0x0100U;
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); HAL_Delay(200);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); HAL_Delay(200);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2); HAL_Delay(200);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2); HAL_Delay(200);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3); HAL_Delay(200);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3); HAL_Delay(200);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4); HAL_Delay(200);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
 	
-	for(int i = 0; i < Life; i++){
-		HAL_GPIO_WritePin(GPIOE, gpio_pin_x, GPIO_PIN_SET);
-		gpio_pin_x = gpio_pin_x << 1;
-		HAL_Delay(200);
-	}
+//	uint16_t gpio_pin_x = 0x0100U;
+//	
+//	for(int i = 0; i < Life; i++){
+//		HAL_GPIO_WritePin(GPIOE, gpio_pin_x, GPIO_PIN_SET);
+//		gpio_pin_x = gpio_pin_x << 1;
+//		HAL_Delay(200);
+//	}
 }
 
 void print_get_level(void){

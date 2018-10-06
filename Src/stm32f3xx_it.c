@@ -63,8 +63,10 @@ uint16_t life_to_pin_number(void);
 bool validate_map(void);
 void reset_all_counters(void);
 
+extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
-extern ADC_HandleTypeDef hadc4;
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim3;
 
 extern uint8_t Life, Level, temp_level;
 extern enum State state;
@@ -80,6 +82,8 @@ extern char keypad_btn;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef hadc2;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim4;
 
@@ -176,6 +180,35 @@ void EXTI0_IRQHandler(void)
   /* USER CODE BEGIN EXTI0_IRQn 1 */
 
   /* USER CODE END EXTI0_IRQn 1 */
+}
+
+/**
+* @brief This function handles ADC1 and ADC2 interrupts.
+*/
+void ADC1_2_IRQHandler(void)
+{
+  /* USER CODE BEGIN ADC1_2_IRQn 0 */
+	uint8_t LDR_value = HAL_ADC_GetValue(&hadc1);
+	int noor_percent = (LDR_value*100)/25;
+	noor_percent = noor_percent < 100 ? noor_percent : 100;
+//	char value[16];
+//	sprintf(value, "Noor: %d%%    ", noor_percent);
+//	home();
+//	print(value);
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, noor_percent);
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, noor_percent);
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, noor_percent);
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, noor_percent);
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, noor_percent);
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, noor_percent);
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, noor_percent);
+	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, noor_percent);
+  /* USER CODE END ADC1_2_IRQn 0 */
+  HAL_ADC_IRQHandler(&hadc1);
+//  HAL_ADC_IRQHandler(&hadc2);
+  /* USER CODE BEGIN ADC1_2_IRQn 1 */
+	HAL_ADC_Start_IT(&hadc1);
+  /* USER CODE END ADC1_2_IRQn 1 */
 }
 
 /**
@@ -289,7 +322,7 @@ void TIM4_IRQHandler(void)
 	 */
 	if(state == Playing)
 		counter_7segment++;
-	
+
 	/*
 	 * Check events
 	 */

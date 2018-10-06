@@ -29,6 +29,8 @@ int char2int(char ch);
 void print_life_on_led(void);
 void print_get_level(void);
 
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim3;
 extern uint8_t Life;
 
 enum State {Idle, Getting_Level, Getting_Level_Error, Playing, GameOver, Finish};
