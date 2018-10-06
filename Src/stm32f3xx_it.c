@@ -365,23 +365,29 @@ void generate_map(void){
 	/*
 	 * Random barrier position
 	 */
-	do {
-		for(int i = 0; i < Level; i++){
-			barrier_pos[i].row = (rand() % 15) + 1;
-			barrier_pos[i].col = rand() % 2;
-			
-			// Check not repetitive
-			for(int j = 0; j < i; j++){
-				if(barrier_pos[j].row == barrier_pos[i].row && barrier_pos[j].col == barrier_pos[i].col){
-					barrier_pos[i].row = (rand() % 15) + 1;
-					barrier_pos[i].col = rand() % 2;
-					
-					j = 0;
-				}
+	for(int i = 0; i < Level; i++){
+		barrier_pos[i].row = (rand() % 15) + 1;
+		barrier_pos[i].col = rand() % 2;
+		
+		bool valid = true;
+		
+		// Check repetitive & path block
+		for(int j = 0; j < i; j++){
+			if((barrier_pos[j].row == barrier_pos[i].row || barrier_pos[j].row == barrier_pos[i].row - 1 || barrier_pos[j].row == barrier_pos[i].row + 1) && barrier_pos[j].col ==  1 - barrier_pos[i].col){
+				// path block
+				valid = false;
+				break;
+			} else if(barrier_pos[j].row == barrier_pos[i].row && barrier_pos[j].col == barrier_pos[i].col){
+				// repetitive
+				valid = false;
+				break;
 			}
 		}
-		srand(++adc2_value);
-	} while(validate_map());
+		if(valid == false){
+			i--;
+			continue;
+		}
+	}
 	
 	/*
 	 * Copy barriers to map
