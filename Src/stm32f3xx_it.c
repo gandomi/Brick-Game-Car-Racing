@@ -56,7 +56,7 @@ void Win(void);
 void Game_Over(void);
 void All_Levels_passed_successfully(void);
 void decrement_life(void);
-void turn_off_lost_life_led(bool effect);
+void turn_off_a_LED(bool effect);
 bool is_Game_over(void);
 uint16_t life_to_pin_number_cumulative(void);
 uint16_t life_to_pin_number(void);
@@ -570,24 +570,140 @@ void All_Levels_passed_successfully(void){
 }
 
 void decrement_life(void){
-	turn_off_lost_life_led(true);
 	Life--;
+	turn_off_a_LED(true);
 }
 
-void turn_off_lost_life_led(bool effect){
+void turn_off_a_LED(bool effect){
 	// Turn Off with some visual effect
-	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
-	if(effect){
-		HAL_Delay(300);
-		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
-		HAL_Delay(300);
-		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
-		HAL_Delay(300);
-		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
-		HAL_Delay(300);
-		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
-		HAL_Delay(300);
+	
+	switch(Life){
+		case 7:
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4);
+			if(effect){
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4);
+				HAL_Delay(300);
+			}
+			break;
+		case 6:
+			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_4);
+			if(effect){
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_4);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_4);
+				HAL_Delay(300);
+			}
+			break;
+		case 5:
+			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
+			if(effect){
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
+				HAL_Delay(300);
+			}
+			break;
+		case 4:
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_3);
+			if(effect){
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_3);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_3);
+				HAL_Delay(300);
+			}
+			break;
+		case 3:
+			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_2);
+			if(effect){
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_2);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_2);
+				HAL_Delay(300);
+			}
+			break;
+		case 2:
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
+			if(effect){
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
+				HAL_Delay(300);
+			}
+			break;
+		case 1:
+			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+			if(effect){
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+				HAL_Delay(300);
+			}
+			break;
+		case 0:
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			if(effect){
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+				HAL_Delay(300);
+				HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+				HAL_Delay(300);
+			}
+			break;
 	}
+	
+//	HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
+//	if(effect){
+//		HAL_Delay(300);
+//		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
+//		HAL_Delay(300);
+//		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
+//		HAL_Delay(300);
+//		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_SET);
+//		HAL_Delay(300);
+//		HAL_GPIO_WritePin(GPIOE, life_to_pin_number(), GPIO_PIN_RESET);
+//		HAL_Delay(300);
+//	}
 }
 
 bool is_Game_over(void){
