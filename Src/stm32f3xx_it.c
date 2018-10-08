@@ -63,12 +63,7 @@ uint16_t life_to_pin_number(void);
 bool validate_map(void);
 void reset_all_counters(void);
 
-extern ADC_HandleTypeDef hadc1;
-extern ADC_HandleTypeDef hadc2;
-extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim3;
-
-extern uint8_t Life, Level, temp_level;
+extern uint8_t Life, Level, temp_level, volume;
 extern enum State state;
 extern enum Playing_State playing_state;
 extern enum Cell map[16][2];
@@ -84,6 +79,7 @@ extern char keypad_btn;
 /* External variables --------------------------------------------------------*/
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
+extern ADC_HandleTypeDef hadc4;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim4;
 
@@ -205,7 +201,7 @@ void ADC1_2_IRQHandler(void)
 	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, noor_percent);
   /* USER CODE END ADC1_2_IRQn 0 */
   HAL_ADC_IRQHandler(&hadc1);
-//  HAL_ADC_IRQHandler(&hadc2);
+  HAL_ADC_IRQHandler(&hadc2);
   /* USER CODE BEGIN ADC1_2_IRQn 1 */
 	HAL_ADC_Start_IT(&hadc1);
   /* USER CODE END ADC1_2_IRQn 1 */
@@ -287,7 +283,7 @@ void TIM2_IRQHandler(void)
 //		print_level_on_7seg();
 //		counter_7segment = 0;
 //	}
-	if(state == Playing && playing_state == Play && counter_player_move == /*500 + */((11 - Level) * 50)){
+	if(state == Playing && playing_state == Play && counter_player_move >= /*500 + */((11 - Level) * volume)){
 		// Move player
 		player_Forward_move();
 		counter_player_move = 0;
@@ -334,8 +330,26 @@ void TIM4_IRQHandler(void)
   /* USER CODE END TIM4_IRQn 0 */
   HAL_TIM_IRQHandler(&htim4);
   /* USER CODE BEGIN TIM4_IRQn 1 */
-
+	
   /* USER CODE END TIM4_IRQn 1 */
+}
+
+/**
+* @brief This function handles ADC4 interrupt.
+*/
+void ADC4_IRQHandler(void)
+{
+  /* USER CODE BEGIN ADC4_IRQn 0 */
+	volume = HAL_ADC_GetValue(&hadc4);
+//	char value[16];
+//	sprintf(value, "Volume: %d%%   ", volume);
+//	home();
+//	print(value);
+  /* USER CODE END ADC4_IRQn 0 */
+  HAL_ADC_IRQHandler(&hadc4);
+  /* USER CODE BEGIN ADC4_IRQn 1 */
+	HAL_ADC_Start_IT(&hadc4);
+  /* USER CODE END ADC4_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
