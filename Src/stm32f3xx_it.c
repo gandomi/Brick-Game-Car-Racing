@@ -48,7 +48,7 @@ void print_map(void);
 void print_level_on_7seg(void);
 void print_to_7447(char num);
 void print_player_move(void);
-void print_game_over(void);
+void print_win_all_level(void);
 void player_Forward_move(void);
 void player_RightLeft_move(void);
 void Lose(void);
@@ -293,6 +293,8 @@ void TIM2_IRQHandler(void)
 		counter_player_move = 0;
 	}
 	if(state == Finish && counter_treasure == 2000){
+		state = Idle;
+		
 		counter_treasure = 0;
 		HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_SET);
 		/* 
@@ -300,8 +302,6 @@ void TIM2_IRQHandler(void)
 	 */
 		HAL_TIM_Base_Stop_IT(&htim2);
 		HAL_TIM_Base_Stop_IT(&htim4);
-		
-		state = Idle;
 	}
 	
   /* USER CODE END TIM2_IRQn 0 */
@@ -465,6 +465,13 @@ void print_player_move(void){
 	write(0);
 }
 
+void print_win_all_level(void){
+	setCursor(0, 0);
+	print("* * YOU WIN * * ");
+	setCursor(0, 1);
+	print(" * * * * * * * *");
+}
+
 void print_game_over(void){
 	clear();
 	
@@ -508,10 +515,10 @@ void player_Forward_move(void){
 	new_player_pos.row = player_pos.row + 1;
 	new_player_pos.col = player_pos.col;
 	
-	if(map[new_player_pos.row][new_player_pos.col] == barrier){
-		Lose();
-	} else if(new_player_pos.row >= 16){
+	if(new_player_pos.row >= 16){
 		Win();
+	} else if(map[new_player_pos.row][new_player_pos.col] == barrier){
+		Lose();
 	} else {
 		print_player_move();
 		player_pos.row = new_player_pos.row;
@@ -572,12 +579,14 @@ void All_Levels_passed_successfully(void){
 	 */
 	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_RESET);
 	
+	print_win_all_level();
+	
 	reset_all_counters();
 }
 
 void decrement_life(void){
 	Life--;
-	turn_off_a_LED(true);
+	turn_off_a_LED(false);
 }
 
 void turn_off_a_LED(bool effect){
