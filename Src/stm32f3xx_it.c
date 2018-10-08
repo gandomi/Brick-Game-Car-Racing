@@ -48,7 +48,7 @@ void print_map(void);
 void print_level_on_7seg(void);
 void print_to_7447(char num);
 void print_player_move(void);
-void print_win_all_level(void);
+void print_win_all_levels(void);
 void player_Forward_move(void);
 void player_RightLeft_move(void);
 void Lose(void);
@@ -465,7 +465,7 @@ void print_player_move(void){
 	write(0);
 }
 
-void print_win_all_level(void){
+void print_win_all_levels(void){
 	setCursor(0, 0);
 	print("* * YOU WIN * * ");
 	setCursor(0, 1);
@@ -551,11 +551,12 @@ void Lose(void){
 
 void Win(void){
 	Level++;
+	playing_state = Pause;
 	if(Level >= 11){
 		All_Levels_passed_successfully();
+	} else {
+		generate_map();
 	}
-	playing_state = Pause;
-	generate_map();
 }
 
 void Game_Over(void){
@@ -574,12 +575,12 @@ void Game_Over(void){
 void All_Levels_passed_successfully(void){
 	state = Finish;
 	
+	print_win_all_levels();
+	
 	/* 
 	 * Open Ganj
 	 */
 	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_RESET);
-	
-	print_win_all_level();
 	
 	reset_all_counters();
 }
