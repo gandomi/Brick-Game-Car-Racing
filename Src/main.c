@@ -63,6 +63,8 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
+UART_HandleTypeDef huart3;
+
 PCD_HandleTypeDef hpcd_USB_FS;
 
 /* USER CODE BEGIN PV */
@@ -71,6 +73,7 @@ uint8_t Life, Level, temp_level, volume;
 enum State state;
 enum Playing_State playing_state;
 enum Cell map[16][2];
+uint8_t UART_Data[1], UART_Command[5], UART_position;
 struct Position player_pos, initial_player_pos, new_player_pos, barrier_pos[10];
 // counters
 uint8_t counter_7segment;
@@ -93,6 +96,7 @@ static void MX_ADC1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_ADC4_Init(void);
+static void MX_USART3_UART_Init(void);
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
                                 
@@ -177,6 +181,7 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_ADC4_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 	initial_tasks();
   /* USER CODE END 2 */
@@ -245,9 +250,10 @@ void SystemClock_Config(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB|RCC_PERIPHCLK_I2C1
-                              |RCC_PERIPHCLK_TIM1|RCC_PERIPHCLK_ADC12
-                              |RCC_PERIPHCLK_ADC34;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB|RCC_PERIPHCLK_USART3
+                              |RCC_PERIPHCLK_I2C1|RCC_PERIPHCLK_TIM1
+                              |RCC_PERIPHCLK_ADC12|RCC_PERIPHCLK_ADC34;
+  PeriphClkInit.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
   PeriphClkInit.Adc12ClockSelection = RCC_ADC12PLLCLK_DIV1;
   PeriphClkInit.Adc34ClockSelection = RCC_ADC34PLLCLK_DIV1;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
@@ -691,6 +697,27 @@ static void MX_TIM4_Init(void)
 
 }
 
+/* USART3 init function */
+static void MX_USART3_UART_Init(void)
+{
+
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 9600;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /* USB init function */
 static void MX_USB_PCD_Init(void)
 {
@@ -807,12 +834,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(Relay_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB2 PB10 PB11 PB13 
-                           PB14 PB15 PB5 PB8 
-                           PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_13 
-                          |GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_5|GPIO_PIN_8 
-                          |GPIO_PIN_9;
+  /*Configure GPIO pins : PB2 PB13 PB14 PB15 
+                           PB5 PB8 PB9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15 
+                          |GPIO_PIN_5|GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -891,6 +916,9 @@ void initial_tasks(){
 	
 	// Enable Volume
 	HAL_ADC_Start_IT(&hadc4);
+	
+	// Enable UART
+	HAL_UART_Receive_IT(&huart3, UART_Data, sizeof(UART_Data));
 	
 	// Init life LED
 	print_life_on_led();

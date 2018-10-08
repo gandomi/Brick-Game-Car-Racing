@@ -67,6 +67,7 @@ extern uint8_t Life, Level, temp_level, volume;
 extern enum State state;
 extern enum Playing_State playing_state;
 extern enum Cell map[16][2];
+extern uint8_t UART_Data[1], UART_Command[5], UART_position;
 extern struct Position player_pos, initial_player_pos, new_player_pos, barrier_pos[10];
 // counters
 extern uint8_t counter_7segment;
@@ -82,6 +83,7 @@ extern ADC_HandleTypeDef hadc2;
 extern ADC_HandleTypeDef hadc4;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim4;
+extern UART_HandleTypeDef huart3;
 
 /******************************************************************************/
 /*            Cortex-M4 Processor Interruption and Exception Handlers         */ 
@@ -332,6 +334,49 @@ void TIM4_IRQHandler(void)
   /* USER CODE BEGIN TIM4_IRQn 1 */
 	
   /* USER CODE END TIM4_IRQn 1 */
+}
+
+/**
+* @brief This function handles USART3 global interrupt / USART3 wake-up interrupt through EXTI line 28.
+*/
+void USART3_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART3_IRQn 0 */
+
+  /* USER CODE END USART3_IRQn 0 */
+  HAL_UART_IRQHandler(&huart3);
+  /* USER CODE BEGIN USART3_IRQn 1 */
+//	clear();
+//	write(UART_Data[0]);
+	UART_Command[UART_position++] = UART_Data[0];
+	
+	if(UART_position == 4 && UART_Command[0] == 'p' && UART_Command[1] == 'l' && UART_Command[2] == 'a' && UART_Command[3] == 'y'){
+		// play
+		playing_state = Play;
+		
+		UART_position = 0;
+	} else if(UART_position == 5 && UART_Command[0] == 'p' && UART_Command[1] == 'a' && UART_Command[2] == 'u' && UART_Command[3] == 's' && UART_Command[4] == 'e'){
+		// pause
+		playing_state = Pause;
+	
+		UART_position = 0;
+	} else if(UART_position == 5 && UART_Command[0] == 'r' && UART_Command[1] == 'e' && UART_Command[2] == 's' && UART_Command[3] == 'e' && UART_Command[4] == 't'){
+		// reset
+		new_player_pos.row = initial_player_pos.row;
+		new_player_pos.col = initial_player_pos.col;
+		print_player_move();
+		player_pos.row = initial_player_pos.row;
+		player_pos.col = initial_player_pos.col;
+	
+		UART_position = 0;
+	}
+	
+	if(UART_position >= 5){
+		UART_position = 0;
+	}
+	
+	HAL_UART_Receive_IT(&huart3, UART_Data, sizeof(UART_Data));
+  /* USER CODE END USART3_IRQn 1 */
 }
 
 /**
