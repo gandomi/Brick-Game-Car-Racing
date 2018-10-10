@@ -62,6 +62,8 @@ uint16_t life_to_pin_number_cumulative(void);
 uint16_t life_to_pin_number(void);
 bool validate_map(void);
 void reset_all_counters(void);
+void Stop_LEDs(void);
+void Start_LEDs(void);
 
 extern uint8_t Life, Level, temp_level, volume;
 extern enum State state;
@@ -71,7 +73,8 @@ extern uint8_t UART_Data[1], UART_Command[5], UART_position;
 extern struct Position player_pos, initial_player_pos, new_player_pos, barrier_pos[10];
 // counters
 extern uint8_t counter_7segment;
-extern uint16_t counter_player_move, counter_treasure;
+extern uint16_t counter_player_move, counter_treasure, counter_blink, forward_move_time;
+extern uint32_t score;
 
 extern bool keypad_row[4];
 extern char keypad_btn;
@@ -157,6 +160,7 @@ void EXTI0_IRQHandler(void)
 	} else if(state == Playing && playing_state == Pause) {
 		// Right/Left move
 		playing_state = Play;
+		Start_LEDs();
 	} else if(state == Playing && playing_state == Play) {
 		// Right/Left move
 		player_RightLeft_move();
@@ -276,6 +280,8 @@ void TIM2_IRQHandler(void)
 		counter_player_move++;
 	if(state == Finish)
 		counter_treasure++;
+	if(state == Playing && playing_state == Pause)
+		counter_blink++;
 	
 	/*
 	 * Check events
@@ -285,7 +291,7 @@ void TIM2_IRQHandler(void)
 //		print_level_on_7seg();
 //		counter_7segment = 0;
 //	}
-	if(state == Playing && playing_state == Play && counter_player_move >= /*500 + */((11 - Level) * volume)){
+	if(state == Playing && playing_state == Play && counter_player_move >= forward_move_time){
 		// Move player
 		player_Forward_move();
 		counter_player_move = 0;
@@ -301,6 +307,14 @@ void TIM2_IRQHandler(void)
 		HAL_TIM_Base_Stop_IT(&htim2);
 		HAL_TIM_Base_Stop_IT(&htim4);
 	}
+	if(state == Playing && playing_state == Pause && counter_blink == 1){
+		Stop_LEDs();
+	}
+	if(state == Playing && playing_state == Pause && counter_blink == 401){
+		Start_LEDs();
+	}
+	if(counter_blink >= 800)
+		counter_blink = 0;
 	
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
@@ -324,7 +338,7 @@ void TIM4_IRQHandler(void)
 	/*
 	 * Check events
 	 */
-	if(state == Playing && counter_7segment == 5){
+	if((state == Playing && playing_state == Play && counter_7segment == 5) || (state == Playing && playing_state == Pause && counter_blink <= 400 && counter_7segment == 5)){
 		// print level on 7 seg
 		print_level_on_7seg();
 		counter_7segment = 0;
@@ -354,6 +368,11 @@ void USART3_IRQHandler(void)
 		// play
 		playing_state = Play;
 		
+		/*
+		 * Enable LED if stoped
+		 */
+		Start_LEDs();
+		
 		UART_position = 0;
 	} else if(UART_position == 5 && UART_Command[0] == 'p' && UART_Command[1] == 'a' && UART_Command[2] == 'u' && UART_Command[3] == 's' && UART_Command[4] == 'e'){
 		// pause
@@ -369,6 +388,7 @@ void USART3_IRQHandler(void)
 		player_pos.col = initial_player_pos.col;
 	
 		UART_position = 0;
+		score = 0;
 	}
 	
 	if(UART_position >= 5){
@@ -406,7 +426,6 @@ void level_error(void){
 
 void generate_map(void){
 	clear_map();
-	// TODO: Bug: Wrong Lose at the end of the messions
 	/*
 	 * Random player position
 	 */
@@ -456,9 +475,14 @@ void generate_map(void){
 	}
 	
 	/*
-	 * print initial map
+	 * Print initial map
 	 */
 	print_map();
+	
+	/*
+	 * Calculate forward move time
+	 */
+	forward_move_time = /*500 + */((11 - Level) * volume);
 }
 
 void clear_map(void){
@@ -581,6 +605,8 @@ void player_Forward_move(void){
 	} else {
 		print_player_move();
 		player_pos.row = new_player_pos.row;
+		
+		score += ((630 - forward_move_time) / 10) + 10;
 	}
 }
 
@@ -852,8 +878,29 @@ bool validate_map(void){
 }
 
 void reset_all_counters(void){
-	counter_7segment = counter_player_move = 0;
+	counter_7segment = counter_blink = counter_player_move = 0;
 }
 
+void Stop_LEDs(void){
+	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_4);
+	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4);
+}
+
+void Start_LEDs(void){
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+}
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

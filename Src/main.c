@@ -77,7 +77,8 @@ uint8_t UART_Data[1], UART_Command[5], UART_position;
 struct Position player_pos, initial_player_pos, new_player_pos, barrier_pos[10];
 // counters
 uint8_t counter_7segment;
-uint16_t counter_player_move, counter_treasure;
+uint16_t counter_player_move, counter_treasure, counter_blink, forward_move_time;
+uint32_t score;
 
 bool keypad_row[4];
 char keypad_btn;
