@@ -64,17 +64,22 @@ bool validate_map(void);
 void reset_all_counters(void);
 void Stop_LEDs(void);
 void Start_LEDs(void);
+void Set_date_time(uint8_t * datetime);
 
 extern uint8_t Life, Level, temp_level, volume;
 extern enum State state;
 extern enum Playing_State playing_state;
 extern enum Cell map[16][2];
-extern uint8_t UART_Data[1], UART_Command[5], UART_position;
+extern uint8_t UART_Data[1], UART_Command[25], UART_position;
 extern struct Position player_pos, initial_player_pos, new_player_pos, barrier_pos[10];
 // counters
 extern uint8_t counter_7segment;
 extern uint16_t counter_player_move, counter_treasure, counter_blink, forward_move_time;
 extern uint32_t score;
+extern RTC_TimeTypeDef myTime;
+extern RTC_DateTypeDef myDate;
+
+extern RTC_HandleTypeDef hrtc;
 
 extern bool keypad_row[4];
 extern char keypad_btn;
@@ -389,9 +394,12 @@ void USART3_IRQHandler(void)
 	
 		UART_position = 0;
 		score = 0;
+	} else if(UART_position == 25 && UART_Command[0] == 'R' && UART_Command[1] == 'T' && UART_Command[2] == 'C'){
+		// Set Date & Time
+		Set_date_time(UART_Command + 4);
 	}
 	
-	if(UART_position >= 5){
+	if(UART_position >= 25 || (UART_position >= 5 && !(UART_Command[0] == 'R' && UART_Command[1] == 'T' && UART_Command[2] == 'C'))){
 		UART_position = 0;
 	}
 	
@@ -901,6 +909,27 @@ void Start_LEDs(void){
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+}
+
+void Set_date_time(uint8_t * datetime){
+	// Format: YYYY/MM/DD HH:MM:SS W
+	
+	/*
+	 * Set Date
+	 */
+	myDate.Year = (10 * char2int(datetime[2])) + char2int(datetime[3]);
+	myDate.Month = (10 * char2int(datetime[5])) + char2int(datetime[6]);
+	myDate.Date = (10 * char2int(datetime[8])) + char2int(datetime[9]);
+	myDate.WeekDay = char2int(datetime[20]);
+	HAL_RTC_SetDate(&hrtc, &myDate, RTC_FORMAT_BIN);
+	
+	/*
+	 * Set Time
+	 */
+	myTime.Hours = (10 * char2int(datetime[11])) + char2int(datetime[12]);
+	myTime.Minutes = (10 * char2int(datetime[14])) + char2int(datetime[15]);
+	myTime.Seconds = (10 * char2int(datetime[17])) + char2int(datetime[18]);
+	HAL_RTC_SetTime(&hrtc, &myTime, RTC_FORMAT_BIN);
 }
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
