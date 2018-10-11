@@ -65,6 +65,7 @@ void reset_all_counters(void);
 void Stop_LEDs(void);
 void Start_LEDs(void);
 void Set_date_time(uint8_t * datetime);
+void Calculate_forward_move_time(void);
 
 extern uint8_t Life, Level, temp_level, volume;
 extern enum State state;
@@ -414,6 +415,7 @@ void ADC4_IRQHandler(void)
 {
   /* USER CODE BEGIN ADC4_IRQn 0 */
 	volume = HAL_ADC_GetValue(&hadc4);
+	Calculate_forward_move_time();
 //	char value[16];
 //	sprintf(value, "Volume: %d%%   ", volume);
 //	home();
@@ -490,7 +492,7 @@ void generate_map(void){
 	/*
 	 * Calculate forward move time
 	 */
-	forward_move_time = /*500 + */((11 - Level) * volume);
+	Calculate_forward_move_time();
 }
 
 void clear_map(void){
@@ -930,6 +932,10 @@ void Set_date_time(uint8_t * datetime){
 	myTime.Minutes = (10 * char2int(datetime[14])) + char2int(datetime[15]);
 	myTime.Seconds = (10 * char2int(datetime[17])) + char2int(datetime[18]);
 	HAL_RTC_SetTime(&hrtc, &myTime, RTC_FORMAT_BIN);
+}
+
+void Calculate_forward_move_time(void){
+	forward_move_time = /*500 + */((11 - Level) * volume);
 }
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
