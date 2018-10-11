@@ -82,7 +82,7 @@ struct HighScore highscores[5];
 uint8_t counter_7segment;
 uint16_t counter_player_move, counter_treasure, counter_blink, forward_move_time;
 uint32_t score;
-uint8_t name[100], name_size;
+uint8_t name[100], name_size, datetime[19];
 RTC_TimeTypeDef myTime;
 RTC_DateTypeDef myDate;
 

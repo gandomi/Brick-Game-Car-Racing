@@ -45,6 +45,7 @@ struct HighScore
    char name[100];
    uint32_t score;
    uint8_t name_size;
+   char datetime[19];
 };
 
 #endif /* __UTILITY_H__ */

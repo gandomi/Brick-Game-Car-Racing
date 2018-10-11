@@ -71,6 +71,7 @@ void Check_for_highscore(void);
 void update_highscores(uint8_t rank);
 void send_highscores_over_UART(void);
 void send_score_over_UART(void);
+void save_datetime(void);
 
 extern uint8_t Life, Level, temp_level, volume;
 extern enum State state;
@@ -83,7 +84,7 @@ extern struct HighScore highscores[5];
 extern uint8_t counter_7segment;
 extern uint16_t counter_player_move, counter_treasure, counter_blink, forward_move_time;
 extern uint32_t score;
-extern uint8_t name[100], name_size;
+extern uint8_t name[100], name_size, datetime[19];
 extern RTC_TimeTypeDef myTime;
 extern RTC_DateTypeDef myDate;
 
@@ -422,6 +423,7 @@ void USART3_IRQHandler(void)
 		score = 0;
 	} else if(UART_position == 25 && UART_Command[0] == 'R' && UART_Command[1] == 'T' && UART_Command[2] == 'C'){
 		// Set Date & Time
+		// Format: RTC YYYY/MM/DD HH:MM:SS W
 		Set_date_time(UART_Command + 4);
 	}
 	
@@ -687,6 +689,8 @@ void Game_Over(void){
 	HAL_TIM_Base_Stop_IT(&htim2);
 	HAL_TIM_Base_Stop_IT(&htim4);
 	
+	save_datetime();
+	
 	print_game_over();
 	
 	send_score_over_UART();
@@ -703,6 +707,8 @@ void All_Levels_passed_successfully(void){
 	 * Open Ganj
 	 */
 	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_RESET);
+	
+	save_datetime();
 	
 	send_score_over_UART();
 	
@@ -986,6 +992,9 @@ void update_highscores(uint8_t rank){
 		}
 		highscores[i].name_size = highscores[i - 1].name_size;
 		highscores[i].score = highscores[i - 1].score;
+		for(int j = 0; j < 19; j++){
+			highscores[i].datetime[j] = highscores[i - 1].datetime[j];
+		}
 	}
 	
 	/*
@@ -996,10 +1005,13 @@ void update_highscores(uint8_t rank){
 	}
 	highscores[rank].name_size = name_size;
 	highscores[rank].score = score;
+	for(int j = 0; j < 19; j++){
+		highscores[rank].datetime[j] = datetime[j];
+	}
 }
 
 void send_highscores_over_UART(void){
-	HAL_UART_Transmit(&huart3, (uint8_t *)'\n', 1, 50);
+	HAL_UART_Transmit(&huart3, (uint8_t *)"\n\n", 1, 50);
 	for(int i = 0; i < 5; i++){
 		uint32_t temp_score = highscores[i].score;
 		uint8_t score_digit_count = 0;
@@ -1012,8 +1024,10 @@ void send_highscores_over_UART(void){
 		sprintf(data_str, "%d.\t", i+1);
 		HAL_UART_Transmit(&huart3, (uint8_t *)data_str, 3, 50);
 		HAL_UART_Transmit(&huart3, (uint8_t *)highscores[i].name, highscores[i].name_size, 50);
-		sprintf(score_str, "\t%d\n", highscores[i].score);
+		sprintf(score_str, "\t%d\t", highscores[i].score);
 		HAL_UART_Transmit(&huart3, (uint8_t *)score_str, score_digit_count + 2 /* +2: For \t & \n */, 50);
+		HAL_UART_Transmit(&huart3, (uint8_t *)highscores[i].datetime, 19, 50);
+		HAL_UART_Transmit(&huart3, (uint8_t *)"\n\n", 1, 50);
 	}
 }
 
@@ -1031,6 +1045,15 @@ void send_score_over_UART(void){
 	
 	// Transmit
 	HAL_UART_Transmit(&huart3, (uint8_t *)score_str, score_digit_count + 1 /* +1: For \n*/, 100);
+}
+
+void save_datetime(void){
+	/* 
+	 * Save datetime
+	 */
+	HAL_RTC_GetTime(&hrtc, &myTime, RTC_FORMAT_BIN);
+	HAL_RTC_GetDate(&hrtc, &myDate, RTC_FORMAT_BIN);
+	sprintf((char *)datetime, "20%02d/%02d/%02d %02d:%02d:%02d", myDate.Year, myDate.Month, myDate.Date, myTime.Hours, myTime.Minutes, myTime.Seconds);
 }
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
