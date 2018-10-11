@@ -313,7 +313,7 @@ void TIM2_IRQHandler(void)
 		HAL_TIM_Base_Stop_IT(&htim2);
 		HAL_TIM_Base_Stop_IT(&htim4);
 	}
-	if(state == Playing && playing_state == Pause && counter_blink == 1){
+	if(state == Playing && playing_state == Pause && counter_blink == 1){ // TODO: FIX the bug of LED 8 14 15
 		Stop_LEDs();
 	}
 	if(state == Playing && playing_state == Pause && counter_blink == 401){
@@ -892,25 +892,25 @@ void reset_all_counters(void){
 }
 
 void Stop_LEDs(void){
-	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
-	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_2);
-	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_3);
-	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
-	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_4);
-	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4);
+	if(Life >= 1) HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	if(Life >= 2) HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+	if(Life >= 3) HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_2);
+	if(Life >= 4) HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_2);
+	if(Life >= 5) HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_3);
+	if(Life >= 6) HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_3);
+	if(Life >= 7) HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_4);
+	if(Life >= 8) HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4);
 }
 
 void Start_LEDs(void){
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+	if(Life >= 1) HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+	if(Life >= 2) HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+	if(Life >= 3) HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+	if(Life >= 4) HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+	if(Life >= 5) HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+	if(Life >= 6) HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+	if(Life >= 7) HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+	if(Life >= 8) HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
 }
 
 void Set_date_time(uint8_t * datetime){
