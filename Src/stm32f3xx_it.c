@@ -40,6 +40,7 @@
 #include "Utility.h"
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 void level_error(void);
 void generate_map(void);
@@ -66,6 +67,10 @@ void Stop_LEDs(void);
 void Start_LEDs(void);
 void Set_date_time(uint8_t * datetime);
 void Calculate_forward_move_time(void);
+void Check_for_highscore(void);
+void update_highscores(uint8_t rank);
+void send_highscores_over_UART(void);
+void send_score_over_UART(void);
 
 extern uint8_t Life, Level, temp_level, volume;
 extern enum State state;
@@ -73,10 +78,12 @@ extern enum Playing_State playing_state;
 extern enum Cell map[16][2];
 extern uint8_t UART_Data[1], UART_Command[25], UART_position;
 extern struct Position player_pos, initial_player_pos, new_player_pos, barrier_pos[10];
+extern struct HighScore highscores[5];
 // counters
 extern uint8_t counter_7segment;
 extern uint16_t counter_player_move, counter_treasure, counter_blink, forward_move_time;
 extern uint32_t score;
+extern uint8_t name[100], name_size;
 extern RTC_TimeTypeDef myTime;
 extern RTC_DateTypeDef myDate;
 
@@ -303,7 +310,7 @@ void TIM2_IRQHandler(void)
 		counter_player_move = 0;
 	}
 	if(state == Finish && counter_treasure == 2000){
-		state = Idle;
+		state = WaitForName;
 		
 		counter_treasure = 0;
 		HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_SET);
@@ -380,6 +387,24 @@ void USART3_IRQHandler(void)
 		Start_LEDs();
 		
 		UART_position = 0;
+	} else if(UART_position >= 4 && UART_Command[0] == 'n' && UART_Command[1] == 'a' && UART_Command[2] == 'm' && UART_Command[3] == 'e'){
+		uint8_t END_index = 4;
+		for(; END_index < 25 && UART_Command[END_index] != ';'; END_index++);
+		if(END_index < 25){
+			// Format: namexxNNNNN... // xx: size // NNNN: xx ta character
+			UART_Command[END_index] = 0;
+			name_size = END_index - 4;
+			for(int i = 0; i < 4 + name_size - 1 && i < 21; i++){
+				name[i] = UART_Command[i + 4];
+			}
+			Check_for_highscore();
+			send_highscores_over_UART();
+			score = 0;
+			
+			state = Idle;
+			
+			UART_position = 0;
+		}
 	} else if(UART_position == 5 && UART_Command[0] == 'p' && UART_Command[1] == 'a' && UART_Command[2] == 'u' && UART_Command[3] == 's' && UART_Command[4] == 'e'){
 		// pause
 		playing_state = Pause;
@@ -400,7 +425,7 @@ void USART3_IRQHandler(void)
 		Set_date_time(UART_Command + 4);
 	}
 	
-	if(UART_position >= 25 || (UART_position >= 5 && !(UART_Command[0] == 'R' && UART_Command[1] == 'T' && UART_Command[2] == 'C'))){
+	if(UART_position >= 25 || (UART_position >= 5 && !(UART_Command[0] == 'R' && UART_Command[1] == 'T' && UART_Command[2] == 'C') && !(UART_Command[0] == 'n' && UART_Command[1] == 'a' && UART_Command[2] == 'm' && UART_Command[3] == 'e'))){
 		UART_position = 0;
 	}
 	
@@ -634,10 +659,10 @@ void player_RightLeft_move(void){
 
 void Lose(void){
 	decrement_life();
+	playing_state = Pause;
 	if(is_Game_over()){
 		Game_Over();
 	} else {
-		playing_state = Pause;
 		player_pos.row = initial_player_pos.row;
 		player_pos.col = initial_player_pos.col;
 		print_map();
@@ -655,7 +680,7 @@ void Win(void){
 }
 
 void Game_Over(void){
-	state = GameOver;
+	state = WaitForName;
 	/* 
 	 * Stop 1ms timer
 	 */
@@ -663,6 +688,8 @@ void Game_Over(void){
 	HAL_TIM_Base_Stop_IT(&htim4);
 	
 	print_game_over();
+	
+	send_score_over_UART();
 	
 	reset_all_counters();
 }
@@ -676,6 +703,8 @@ void All_Levels_passed_successfully(void){
 	 * Open Ganj
 	 */
 	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_4, GPIO_PIN_RESET);
+	
+	send_score_over_UART();
 	
 	reset_all_counters();
 }
@@ -936,6 +965,72 @@ void Set_date_time(uint8_t * datetime){
 
 void Calculate_forward_move_time(void){
 	forward_move_time = /*500 + */((11 - Level) * volume);
+}
+
+void Check_for_highscore(void){
+	for(int i = 0; i < 5; i++){
+		if(score > highscores[i].score){
+			update_highscores(i);
+			break;
+		}
+	}
+}
+
+void update_highscores(uint8_t rank){
+	/*
+	 * Shift
+	 */
+	for(int i = 4; i >= rank + 1; i--){
+		for(int j = 0; j < highscores[i - 1].name_size; j++){
+			highscores[i].name[j] = highscores[i - 1].name[j];
+		}
+		highscores[i].name_size = highscores[i - 1].name_size;
+		highscores[i].score = highscores[i - 1].score;
+	}
+	
+	/*
+	 * Push current player to High Scores table
+	 */
+	for(int j = 0; j < name_size; j++){
+		highscores[rank].name[j] = name[j];
+	}
+	highscores[rank].name_size = name_size;
+	highscores[rank].score = score;
+}
+
+void send_highscores_over_UART(void){
+	HAL_UART_Transmit(&huart3, (uint8_t *)'\n', 1, 50);
+	for(int i = 0; i < 5; i++){
+		uint32_t temp_score = highscores[i].score;
+		uint8_t score_digit_count = 0;
+		do
+		{
+				score_digit_count++;
+				temp_score /= 10;
+		} while(temp_score != 0);
+		char data_str[3], score_str[12];
+		sprintf(data_str, "%d.\t", i+1);
+		HAL_UART_Transmit(&huart3, (uint8_t *)data_str, 3, 50);
+		HAL_UART_Transmit(&huart3, (uint8_t *)highscores[i].name, highscores[i].name_size, 50);
+		sprintf(score_str, "\t%d\n", highscores[i].score);
+		HAL_UART_Transmit(&huart3, (uint8_t *)score_str, score_digit_count + 2 /* +2: For \t & \n */, 50);
+	}
+}
+
+void send_score_over_UART(void){
+	/* Count number of digit in score */
+	uint32_t temp_score = score;
+	uint8_t score_digit_count = 0;
+	while(temp_score != 0)
+	{
+			score_digit_count++;
+			temp_score /= 10;
+	}
+	char score_str[11];
+	sprintf(score_str, "%d\n", score);
+	
+	// Transmit
+	HAL_UART_Transmit(&huart3, (uint8_t *)score_str, score_digit_count + 1 /* +1: For \n*/, 100);
 }
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

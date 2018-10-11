@@ -77,10 +77,12 @@ enum Playing_State playing_state;
 enum Cell map[16][2];
 uint8_t UART_Data[1], UART_Command[25], UART_position;
 struct Position player_pos, initial_player_pos, new_player_pos, barrier_pos[10];
+struct HighScore highscores[5];
 // counters
 uint8_t counter_7segment;
 uint16_t counter_player_move, counter_treasure, counter_blink, forward_move_time;
 uint32_t score;
+uint8_t name[100], name_size;
 RTC_TimeTypeDef myTime;
 RTC_DateTypeDef myDate;
 

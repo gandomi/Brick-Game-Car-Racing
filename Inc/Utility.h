@@ -33,12 +33,18 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
 extern uint8_t Life;
 
-enum State {Idle, Getting_Level, Getting_Level_Error, Playing, GameOver, Finish};
+enum State {Idle, Getting_Level, Getting_Level_Error, Playing, GameOver, Finish, WaitForName};
 enum Playing_State {Play, Pause};
 enum Cell {empty, barrier, player}; 
 struct Position 
 { 
    uint8_t row, col; 
+};
+struct HighScore
+{ 
+   char name[100];
+   uint32_t score;
+   uint8_t name_size;
 };
 
 #endif /* __UTILITY_H__ */
